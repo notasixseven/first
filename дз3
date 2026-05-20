@@ -1,0 +1,59 @@
+import csv
+import re
+from pprint import pprint
+
+with open("phonebook_raw.csv", encoding="utf-8") as f:
+    rows = csv.reader(f, delimiter=",")
+    contacts_list = list(rows)
+
+processed_contacts = []
+for contact in contacts_list:
+    fio_parts = []
+    for i in range(3):
+        if contact[i] and contact[i].strip():
+            fio_parts.extend(contact[i].split())
+    
+    lastname = fio_parts[0] if len(fio_parts) > 0 else ""
+    firstname = fio_parts[1] if len(fio_parts) > 1 else ""
+    surname = fio_parts[2] if len(fio_parts) > 2 else ""
+    
+    organization = contact[3]
+    position = contact[4]
+    phone = contact[5]
+    email = contact[6]
+    
+    if phone:
+        pattern_main = r'(\+7|8)?\s*\(?(\d{3})\)?\s*[\s-]?(\d{3})[\s-]?(\d{2})[\s-]?(\d{2})'
+        phone_formatted = re.sub(pattern_main, r'+7(\2)\3-\4-\5', phone)
+        
+        pattern_ext = r'\(?доб\.?\s*(\d+)\)?'
+        ext_match = re.search(pattern_ext, phone, re.IGNORECASE)
+        if ext_match:
+            phone_formatted += f' доб.{ext_match.group(1)}'
+        
+        phone = phone_formatted
+    
+    processed_contacts.append([lastname, firstname, surname, organization, position, phone, email])
+
+header = processed_contacts[0]
+data = processed_contacts[1:]
+
+unique_contacts = {}
+for contact in data:
+    key = (contact[0].lower(), contact[1].lower())
+    
+    if key not in unique_contacts:
+        unique_contacts[key] = contact.copy()
+    else:
+        existing = unique_contacts[key]
+        for i in range(len(contact)):
+            if contact[i] and not existing[i]:
+                existing[i] = contact[i]
+
+result_contacts = [header] + list(unique_contacts.values())
+
+with open("phonebook.csv", "w", encoding="utf-8", newline="") as f:
+    datawriter = csv.writer(f, delimiter=',')
+    datawriter.writerows(result_contacts)
+
+pprint(result_contacts)
